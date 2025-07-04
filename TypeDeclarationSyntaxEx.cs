@@ -41,14 +41,24 @@ public static class TypeDeclarationSyntaxEx
 
         return syntax.NormalizeWhitespace().WithTrailingTrivia(trailingTrivia);
     }
-    
+
     public static bool IsDeclarationOf(this TypeDeclarationSyntax syntax, BaseTypeSyntax baseTypeSyntax)
     {
+        var typeParameterList = syntax.TypeParameterList;
         if (!syntax.Identifier.IsEquivalentTo(baseTypeSyntax.GetFirstToken()))
+        {
+            // TODO: This is highly suspicious
+            if (syntax.Identifier.Text == baseTypeSyntax.ToString())
+            {
+                return true;
+            }
+            return false;
+        }
+
+        if (baseTypeSyntax.FirstChildNoteOrDefault<GenericNameSyntax>() is not {} genericNameSyntax)
             return false;
 
-        var genericParameterList = baseTypeSyntax.FirstChildNode<GenericNameSyntax>().TypeArgumentList;
-        var typeParameterList = syntax.TypeParameterList;
+        var genericParameterList = genericNameSyntax.TypeArgumentList;
         return typeParameterList?.Parameters.Count == genericParameterList.Arguments.Count;
     }
 
@@ -58,10 +68,12 @@ public static class TypeDeclarationSyntaxEx
         {
             InterfaceDeclarationSyntax => syntax.WithMembers(
                 SyntaxFactory.List(members
-                    .WithModifier(SyntaxFactory.Token(SyntaxKind.NewKeyword))
+                    .AddModifierIfNotExists(SyntaxFactory.Token(SyntaxKind.NewKeyword))
                 )
             ),
-            _ => syntax.WithMembers(SyntaxFactory.List(members)),
+            _ => syntax.WithMembers(SyntaxFactory.List(members.AddModifierIfNotExists(
+                SyntaxFactory.Token(SyntaxKind.PublicKeyword)
+            ))),
         };
 
 

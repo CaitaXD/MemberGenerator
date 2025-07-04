@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -66,12 +67,17 @@ public class MemberGenerator : IIncrementalGenerator
                     cancellationToken: cancellationToken
                 )
             ))
-            .Where(static state => state.parentInterfaces.Any())
-            .Select(static (state, _) => (
-                state.interfaceSyntax,
-                state.parentInterfaces,
-                members: GetDefaultInterfaceMembers(state.parentInterfaces)
-            ))
+            //.Where(static state => state.parentInterfaces.Any())
+            .Select(static (state, _) =>
+            {
+                return (
+                    state.interfaceSyntax,
+                    state.parentInterfaces,
+                    members: GetDefaultInterfaceMembers(state.parentInterfaces).Concat(
+                        state.interfaceSyntax.GetDefaultInterfaceMembers()
+                    )
+                );
+            })
             .Collect()
             .Select(static (state, _) =>
             {
@@ -87,7 +93,7 @@ public class MemberGenerator : IIncrementalGenerator
                 static (context, _) => (TypeDeclarationSyntax)context.Node
             )
             .Collect()
-            .Select(static (syntax, _) => syntax.GroupByToImmutableDictionary(syntax => 
+            .Select(static (syntax, _) => syntax.GroupByToImmutableDictionary(syntax =>
                 syntax.Identifier.Text + syntax.TypeParameterList
             ));
 
@@ -114,7 +120,6 @@ public class MemberGenerator : IIncrementalGenerator
             .Select(static (state, cancellationToken) =>
             {
                 var (typeSyntax, defaultInterfaceMembersMap, partialParts) = state;
-
                 var namespaceName = typeSyntax.GetNamespace();
                 var notImplementedMembers = ExtractNotImplementedMembers(
                     typeSyntax,
@@ -167,6 +172,7 @@ public class MemberGenerator : IIncrementalGenerator
             {
                 var (interfaceSyntax, defaultMembers) = (kvp.Key, kvp.Value);
                 if (cancellationToken.IsCancellationRequested) break;
+
                 if (interfaceSyntax.IsDeclarationOf(baseTypeSyntax))
                 {
                     var resolvedMembers = defaultMembers.ResolveGenerics(baseTypeSyntax, interfaceSyntax);

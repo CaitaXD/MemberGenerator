@@ -13,7 +13,7 @@ public readonly struct MemberSignature : IEquatable<MemberSignature>
 
     public MemberSignature(SyntaxToken identifier, ParameterListSyntax? parameters)
     {
-        Identifier = identifier;
+        Identifier = identifier.WithoutTrivia();
         Parameters = parameters;
     }
 

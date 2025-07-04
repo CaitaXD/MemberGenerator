@@ -8,18 +8,30 @@ namespace MemberGenerator;
 
 public static class MemberDeclarationSyntaxEx
 {
-    public static MemberDeclarationSyntax WithoutModifier(this MemberDeclarationSyntax syntax, SyntaxToken token) =>
+    public static MemberDeclarationSyntax RemoveModifier(this MemberDeclarationSyntax syntax, SyntaxToken token) =>
         syntax.WithModifiers(syntax.Modifiers.Remove(token));
 
-    public static MemberDeclarationSyntax WithModifier(this MemberDeclarationSyntax syntax, SyntaxToken token) =>
-        syntax.WithModifiers(syntax.Modifiers.Add(token));
+    public static MemberDeclarationSyntax AddModifierIfNotExists(
+        this MemberDeclarationSyntax syntax, SyntaxToken token) =>
+        syntax.Modifiers.Any(t => t.IsKind(token.Kind()))
+            ? syntax
+            : syntax.WithModifiers(syntax.Modifiers.Add(token));
 
-    public static IEnumerable<MemberDeclarationSyntax> WithModifier(
+    public static IEnumerable<MemberDeclarationSyntax> AddModifierIfNotExists(
         this IEnumerable<MemberDeclarationSyntax> members,
         SyntaxToken token)
     {
         foreach (var t in members)
-            yield return t.WithModifiers(t.Modifiers.Add(token));
+            yield return t.AddModifierIfNotExists(token);
+    }
+
+    public static IEnumerable<MemberDeclarationSyntax> AddModifiersIfNotExists(
+        this IEnumerable<MemberDeclarationSyntax> members,
+        SyntaxTokenList tokens)
+    {
+        foreach (var t in members)
+        foreach (var token in tokens)
+            yield return t.AddModifierIfNotExists(token);
     }
 
     public static MemberSignature GetSignature(this MemberDeclarationSyntax syntax) =>
@@ -48,7 +60,7 @@ public static class MemberDeclarationSyntaxEx
         if (separatedTypeSyntaxList.Arguments.Count > 0)
             typeArgumentTokens = separatedTypeSyntaxList.TraverseTokens();
 
-        memberSyntax = memberSyntax.WithoutModifier(publicKeyword);
+        memberSyntax = memberSyntax.RemoveModifier(publicKeyword);
 
         var memberNameToken = memberSyntax.LastChildToken(SyntaxKind.IdentifierToken);
         var typeNameToken = baseTypeSyntax.GetFirstToken();
