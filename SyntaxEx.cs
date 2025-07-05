@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -10,11 +11,11 @@ namespace MemberGenerator;
 
 public static class SyntaxEx
 {
-    public static TSyntax? FirstChildNoteOrDefault<TSyntax>(this SyntaxNode syntaxNode)
+    public static TSyntax? FirstChildNodeOrDefault<TSyntax>(this SyntaxNode syntaxNode)
         where TSyntax : SyntaxNode =>
         syntaxNode.ChildNodes().OfType<TSyntax>().FirstOrDefault();
 
-    public static TSyntax? LastChildNoteOrDefault<TSyntax>(this SyntaxNode syntaxNode)
+    public static TSyntax? LastChildNodeOrDefault<TSyntax>(this SyntaxNode syntaxNode)
         where TSyntax : SyntaxNode =>
         syntaxNode.ChildNodes().OfType<TSyntax>().LastOrDefault();
 
@@ -157,6 +158,33 @@ public static class SyntaxEx
             foreach (var childNode in node.ChildNodes())
                 stack.Push(childNode);
         }
+    }
+
+    public static string GetNamespace(this SyntaxNode syntax)
+    {
+        string nameSpace = string.Empty;
+
+        SyntaxNode? potentialParent = syntax.Parent;
+
+        while (potentialParent is not null
+               and not NamespaceDeclarationSyntax
+               and not FileScopedNamespaceDeclarationSyntax)
+        {
+            potentialParent = potentialParent.Parent;
+        }
+
+        if (potentialParent is BaseNamespaceDeclarationSyntax namespaceParent)
+        {
+            nameSpace = namespaceParent.Name.ToString();
+            while (true)
+            {
+                if (namespaceParent.Parent is not NamespaceDeclarationSyntax parent) break;
+                nameSpace = $"{namespaceParent.Name}.{nameSpace}";
+                namespaceParent = parent;
+            }
+        }
+
+        return nameSpace;
     }
 
     public static bool IsPartialTypeDeclaration(this SyntaxNode syntax) =>

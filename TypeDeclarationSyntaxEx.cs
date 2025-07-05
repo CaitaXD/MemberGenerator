@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -11,8 +12,14 @@ public static class TypeDeclarationSyntaxEx
     public static TypeDeclarationSyntax CreatePartialType(this TypeDeclarationSyntax syntax)
     {
         var trailingTrivia = syntax.GetTrailingTrivia();
-
+        
         syntax = syntax.WithBaseList(null);
+
+        if (syntax.FirstChildNodeOrDefault<ParameterListSyntax>() is {} parameterListSyntax)
+        {
+            if (syntax.RemoveNode(parameterListSyntax, SyntaxRemoveOptions.KeepNoTrivia) is {} newSyntax)
+                syntax = newSyntax;
+        }
 
         var lineEnd = SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed);
         if (syntax.OpenBraceToken.IsKind(SyntaxKind.None))
@@ -52,10 +59,11 @@ public static class TypeDeclarationSyntaxEx
             {
                 return true;
             }
+
             return false;
         }
 
-        if (baseTypeSyntax.FirstChildNoteOrDefault<GenericNameSyntax>() is not {} genericNameSyntax)
+        if (baseTypeSyntax.FirstChildNodeOrDefault<GenericNameSyntax>() is not {} genericNameSyntax)
             return false;
 
         var genericParameterList = genericNameSyntax.TypeArgumentList;
@@ -87,32 +95,5 @@ public static class TypeDeclarationSyntaxEx
         foreach (var memberSyntax in members)
             syntaxList = syntaxList.Add(memberSyntax.ToExplicit(syntax, interfaceSyntax));
         return syntax.WithMembers(syntaxList);
-    }
-
-    public static string GetNamespace(this BaseTypeDeclarationSyntax syntax)
-    {
-        string nameSpace = string.Empty;
-
-        SyntaxNode? potentialParent = syntax.Parent;
-
-        while (potentialParent is not null
-               and not NamespaceDeclarationSyntax
-               and not FileScopedNamespaceDeclarationSyntax)
-        {
-            potentialParent = potentialParent.Parent;
-        }
-
-        if (potentialParent is BaseNamespaceDeclarationSyntax namespaceParent)
-        {
-            nameSpace = namespaceParent.Name.ToString();
-            while (true)
-            {
-                if (namespaceParent.Parent is not NamespaceDeclarationSyntax parent) break;
-                nameSpace = $"{namespaceParent.Name}.{nameSpace}";
-                namespaceParent = parent;
-            }
-        }
-
-        return nameSpace;
     }
 }

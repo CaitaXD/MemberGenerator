@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MemberGenerator;
@@ -8,10 +9,10 @@ namespace MemberGenerator;
 public readonly struct MemberSignature : IEquatable<MemberSignature>
 {
     public readonly SyntaxToken?               Identifier;
-    public readonly ParameterListSyntax?       Parameters;
+    public readonly BaseParameterListSyntax?   Parameters;
     public readonly VariableDeclarationSyntax? Declaration;
 
-    public MemberSignature(SyntaxToken identifier, ParameterListSyntax? parameters)
+    public MemberSignature(SyntaxToken identifier, BaseParameterListSyntax? parameters)
     {
         Identifier = identifier.WithoutTrivia();
         Parameters = parameters;
@@ -36,6 +37,9 @@ public readonly struct MemberSignature : IEquatable<MemberSignature>
         ConstructorDeclarationSyntax c => new MemberSignature(c.Identifier, c.ParameterList),
         EnumDeclarationSyntax e => new MemberSignature(e.Identifier),
         TypeDeclarationSyntax t => new MemberSignature(t.Identifier),
+        IndexerDeclarationSyntax i => new MemberSignature(SyntaxFactory.Identifier("this"), i.ParameterList),
+        ConversionOperatorDeclarationSyntax c => new MemberSignature(c.ImplicitOrExplicitKeyword, c.ParameterList),
+        OperatorDeclarationSyntax o => new MemberSignature(o.OperatorToken, o.ParameterList),
         _ => throw new ArgumentException($"Invalid member type: {syntax.GetType().FullName}")
     };
 
