@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -7,7 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace MemberGenerator;
+namespace MemberGenerator.Ex;
 
 public static class SyntaxEx
 {
@@ -102,32 +101,7 @@ public static class SyntaxEx
 
         return builder.ToImmutable();
     }
-
-    public static ImmutableArray<SyntaxToken> TraverseTokens(this IEnumerable<SyntaxNode> forest)
-    {
-        var stack = new Stack<SyntaxNodeOrToken>();
-        var builder = ImmutableArray.CreateBuilder<SyntaxToken>();
-
-        foreach (var tree in forest)
-            stack.Push(tree);
-
-        while (stack.Count > 0)
-        {
-            var current = stack.Pop();
-
-            if (current.IsToken)
-            {
-                builder.Insert(0, current.AsToken());
-                continue;
-            }
-
-            foreach (var child in current.ChildNodesAndTokens())
-                stack.Push(child);
-        }
-
-        return builder.ToImmutable();
-    }
-
+    
     public static IEnumerable<T> TraverseNodesDepthFirst<T>(this SyntaxNode syntax, Func<SyntaxNode, T> selector)
     {
         HashSet<SyntaxNode> visited = [];

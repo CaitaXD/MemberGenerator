@@ -4,12 +4,16 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace MemberGenerator;
+namespace MemberGenerator.Ex;
 
 public static class MemberDeclarationSyntaxEx
 {
     public static MemberDeclarationSyntax RemoveModifier(this MemberDeclarationSyntax syntax, SyntaxToken token) =>
         syntax.WithModifiers(syntax.Modifiers.Remove(token));
+    
+    public static MemberDeclarationSyntax RemoveModifier(this MemberDeclarationSyntax syntax, SyntaxToken token,
+        out MemberDeclarationSyntax outSyntax) =>
+        outSyntax = syntax.WithModifiers(syntax.Modifiers.Remove(token));
 
     public static MemberDeclarationSyntax AddModifierIfNotExists(
         this MemberDeclarationSyntax syntax, SyntaxToken token) =>
@@ -23,6 +27,14 @@ public static class MemberDeclarationSyntaxEx
     {
         foreach (var t in members)
             yield return t.AddModifierIfNotExists(token);
+    }
+    
+    public static IEnumerable<MemberDeclarationSyntax> RemoveModifiers(
+        this IEnumerable<MemberDeclarationSyntax> members,
+        SyntaxToken token)
+    {
+        foreach (var t in members)
+            yield return t.RemoveModifier(token);
     }
 
     public static IEnumerable<MemberDeclarationSyntax> AddModifiersIfNotExists(
@@ -85,4 +97,12 @@ public static class MemberDeclarationSyntaxEx
 
         return memberSyntax.NormalizeWhitespace();
     }
+    
+    public static bool ContainsExplicitInterfaceSpecifier(this MemberDeclarationSyntax syntax) =>
+        syntax is MethodDeclarationSyntax { ExplicitInterfaceSpecifier: not null } or
+            PropertyDeclarationSyntax { ExplicitInterfaceSpecifier: not null } or
+            IndexerDeclarationSyntax { ExplicitInterfaceSpecifier: not null } or
+            ConversionOperatorDeclarationSyntax { ExplicitInterfaceSpecifier: not null } or
+            OperatorDeclarationSyntax { ExplicitInterfaceSpecifier: not null };
+
 }

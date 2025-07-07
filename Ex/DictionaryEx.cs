@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace MemberGenerator;
+namespace MemberGenerator.Ex;
 
 public static class DictionaryEx
 {

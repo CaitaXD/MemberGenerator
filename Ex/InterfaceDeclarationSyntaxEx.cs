@@ -2,11 +2,18 @@
 using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace MemberGenerator;
+namespace MemberGenerator.Ex;
 
 public static class InterfaceDeclarationSyntaxEx
 {
-    public static IEnumerable<MemberDeclarationSyntax> GetDefaultInterfaceMembers(
+    public static bool DirectlyImplements(this InterfaceDeclarationSyntax declaration, TypeSyntax type)
+    {
+        string typeName = type.ToString();
+        string interfaceName = declaration.Identifier.Text;
+        return interfaceName == typeName || declaration.SameArity(type) && typeName.StartsWith(interfaceName);
+    }
+
+    public static IEnumerable<MemberDeclarationSyntax> GetDefaultMembers(
         this InterfaceDeclarationSyntax syntax)
     {
         return syntax.Members

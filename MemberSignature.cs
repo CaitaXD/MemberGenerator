@@ -8,9 +8,10 @@ namespace MemberGenerator;
 
 public readonly struct MemberSignature : IEquatable<MemberSignature>
 {
-    public readonly SyntaxToken?               Identifier;
-    public readonly BaseParameterListSyntax?   Parameters;
-    public readonly VariableDeclarationSyntax? Declaration;
+    public SyntaxToken? Identifier { get; init; }
+    public BaseParameterListSyntax? Parameters { get; init; }
+    public VariableDeclarationSyntax? Declaration { get; init; }
+    public ExplicitInterfaceSpecifierSyntax? ExplicitInterfaceSpecifier { get; init; }
 
     public MemberSignature(SyntaxToken identifier, BaseParameterListSyntax? parameters)
     {
@@ -30,22 +31,42 @@ public readonly struct MemberSignature : IEquatable<MemberSignature>
 
     public static MemberSignature FromDeclarationSyntax(MemberDeclarationSyntax syntax) => syntax switch
     {
-        MethodDeclarationSyntax m => new MemberSignature(m.Identifier, m.ParameterList),
-        PropertyDeclarationSyntax p => new MemberSignature(p.Identifier),
+        MethodDeclarationSyntax m => new MemberSignature(m.Identifier, m.ParameterList)
+        {
+            ExplicitInterfaceSpecifier = m.ExplicitInterfaceSpecifier
+        },
+        PropertyDeclarationSyntax p => new MemberSignature(p.Identifier)
+        {
+            ExplicitInterfaceSpecifier = p.ExplicitInterfaceSpecifier
+        },
         RecordDeclarationSyntax r => new MemberSignature(r.Identifier, r.ParameterList),
         FieldDeclarationSyntax f => new MemberSignature(f.Declaration),
         ConstructorDeclarationSyntax c => new MemberSignature(c.Identifier, c.ParameterList),
         EnumDeclarationSyntax e => new MemberSignature(e.Identifier),
         TypeDeclarationSyntax t => new MemberSignature(t.Identifier),
-        IndexerDeclarationSyntax i => new MemberSignature(SyntaxFactory.Identifier("this"), i.ParameterList),
-        ConversionOperatorDeclarationSyntax c => new MemberSignature(c.ImplicitOrExplicitKeyword, c.ParameterList),
-        OperatorDeclarationSyntax o => new MemberSignature(o.OperatorToken, o.ParameterList),
+        IndexerDeclarationSyntax i => new MemberSignature(SyntaxFactory.Identifier("this"), i.ParameterList)
+        {
+            ExplicitInterfaceSpecifier = i.ExplicitInterfaceSpecifier
+        },
+        ConversionOperatorDeclarationSyntax c => new MemberSignature(c.ImplicitOrExplicitKeyword, c.ParameterList)
+        {
+            ExplicitInterfaceSpecifier = c.ExplicitInterfaceSpecifier
+        },
+        OperatorDeclarationSyntax o => new MemberSignature(o.OperatorToken, o.ParameterList)
+        {
+            ExplicitInterfaceSpecifier = o.ExplicitInterfaceSpecifier
+        },
         _ => throw new ArgumentException($"Invalid member type: {syntax.GetType().FullName}")
     };
 
     public override string ToString()
     {
         StringBuilder sb = new();
+
+        if (ExplicitInterfaceSpecifier is not null)
+        {
+            sb.Append(ExplicitInterfaceSpecifier);
+        }
 
         if (Identifier is not null)
         {
@@ -73,6 +94,7 @@ public readonly struct MemberSignature : IEquatable<MemberSignature>
     }
 
     public bool Equals(MemberSignature other) =>
+        ExplicitInterfaceSpecifier?.ToString() == other.ExplicitInterfaceSpecifier?.ToString() &&
         Identifier.ToString() == other.Identifier.ToString() &&
         Parameters?.ToString() == other.Parameters?.ToString() &&
         Declaration?.ToString() == other.Declaration?.ToString();
@@ -85,11 +107,13 @@ public readonly struct MemberSignature : IEquatable<MemberSignature>
     public override int GetHashCode()
     {
         int hashCode = 0;
+        string? explicitInterfaceSpecifier = ExplicitInterfaceSpecifier?.ToString();
         string? identifier = Identifier?.ToString();
         string? parameters = Parameters?.ToString();
         string? declaration = Declaration?.ToString();
         unchecked
         {
+            Combine(ref hashCode, explicitInterfaceSpecifier?.GetHashCode() ?? 0);
             Combine(ref hashCode, identifier?.GetHashCode() ?? 0);
             Combine(ref hashCode, parameters?.GetHashCode() ?? 0);
             Combine(ref hashCode, declaration?.GetHashCode() ?? 0);
