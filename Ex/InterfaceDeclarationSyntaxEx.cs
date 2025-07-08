@@ -6,7 +6,7 @@ namespace MemberGenerator.Ex;
 
 public static class InterfaceDeclarationSyntaxEx
 {
-    public static bool DirectlyImplements(this InterfaceDeclarationSyntax declaration, TypeSyntax type)
+    public static bool NameEquals(this InterfaceDeclarationSyntax declaration, TypeSyntax type)
     {
         string typeName = type.ToString();
         string interfaceName = declaration.Identifier.Text;
@@ -14,15 +14,15 @@ public static class InterfaceDeclarationSyntaxEx
     }
 
     public static IEnumerable<MemberDeclarationSyntax> GetDefaultMembers(
-        this InterfaceDeclarationSyntax syntax)
-    {
-        return syntax.Members
-            .Where(memberSyntax => memberSyntax switch
-            {
-                MethodDeclarationSyntax { Body: not null } => true,
-                MethodDeclarationSyntax { ExpressionBody: not null } => true,
-                PropertyDeclarationSyntax { ExpressionBody: not null } => true,
-                _ => false,
-            });
-    }
+        this InterfaceDeclarationSyntax syntax) =>
+        syntax.Members.Where(memberSyntax => memberSyntax switch
+        {
+            MethodDeclarationSyntax { Body: not null } => true,
+            MethodDeclarationSyntax { ExpressionBody: not null } => true,
+            PropertyDeclarationSyntax { ExpressionBody: not null } => true,
+            _ => false,
+        });
+
+    public static IEnumerable<MemberDeclarationSyntax> GetDefaultMembers(
+        this IEnumerable<InterfaceDeclarationSyntax> syntax) => syntax.SelectMany(GetDefaultMembers);
 }

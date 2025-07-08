@@ -25,7 +25,7 @@ public static class MemberDeclarationSyntaxEx
         this IEnumerable<MemberDeclarationSyntax> members,
         SyntaxToken token)
     {
-        foreach (var t in members)
+        foreach (MemberDeclarationSyntax? t in members)
             yield return t.AddModifierIfNotExists(token);
     }
     
@@ -33,7 +33,7 @@ public static class MemberDeclarationSyntaxEx
         this IEnumerable<MemberDeclarationSyntax> members,
         SyntaxToken token)
     {
-        foreach (var t in members)
+        foreach (MemberDeclarationSyntax? t in members)
             yield return t.RemoveModifier(token);
     }
 
@@ -41,8 +41,8 @@ public static class MemberDeclarationSyntaxEx
         this IEnumerable<MemberDeclarationSyntax> members,
         SyntaxTokenList tokens)
     {
-        foreach (var t in members)
-        foreach (var token in tokens)
+        foreach (MemberDeclarationSyntax? t in members)
+        foreach (SyntaxToken token in tokens)
             yield return t.AddModifierIfNotExists(token);
     }
 
@@ -65,8 +65,8 @@ public static class MemberDeclarationSyntaxEx
         if (memberSyntax.FirstChildTokenOrDefault(SyntaxKind.PublicKeyword) is not {} publicKeyword)
             return memberSyntax;
 
-        var genericNameSyntax = baseTypeSyntax.FirstChildNode<GenericNameSyntax>();
-        var separatedTypeSyntaxList = genericNameSyntax?.TypeArgumentList ?? SyntaxFactory.TypeArgumentList();
+        GenericNameSyntax? genericNameSyntax = baseTypeSyntax.FirstChildNode<GenericNameSyntax>();
+        TypeArgumentListSyntax? separatedTypeSyntaxList = genericNameSyntax?.TypeArgumentList ?? SyntaxFactory.TypeArgumentList();
 
         var typeArgumentTokens = Enumerable.Empty<SyntaxToken>();
         if (separatedTypeSyntaxList.Arguments.Count > 0)
@@ -74,10 +74,10 @@ public static class MemberDeclarationSyntaxEx
 
         memberSyntax = memberSyntax.RemoveModifier(publicKeyword);
 
-        var memberNameToken = memberSyntax.LastChildToken(SyntaxKind.IdentifierToken);
-        var typeNameToken = baseTypeSyntax.GetFirstToken();
+        SyntaxToken memberNameToken = memberSyntax.LastChildToken(SyntaxKind.IdentifierToken);
+        SyntaxToken typeNameToken = baseTypeSyntax.GetFirstToken();
 
-        var syntaxTokenList = SyntaxFactory.TokenList([
+        SyntaxTokenList syntaxTokenList = SyntaxFactory.TokenList([
                 typeNameToken,
                 ..typeArgumentTokens,
                 SyntaxFactory.Token(SyntaxKind.DotToken),

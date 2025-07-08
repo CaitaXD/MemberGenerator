@@ -28,7 +28,7 @@ public static class SyntaxEx
 
     public static SyntaxToken? FirstChildTokenOrDefault(this SyntaxNode syntaxNode, SyntaxKind kind)
     {
-        foreach (var child in syntaxNode.ChildTokens())
+        foreach (SyntaxToken child in syntaxNode.ChildTokens())
             if (child.IsKind(kind))
                 return child;
         return null;
@@ -36,7 +36,7 @@ public static class SyntaxEx
 
     public static SyntaxToken? LastChildTokenOrDefault(this SyntaxNode syntaxNode, SyntaxKind kind)
     {
-        foreach (var child in syntaxNode.ChildTokens().Reverse())
+        foreach (SyntaxToken child in syntaxNode.ChildTokens().Reverse())
             if (child.IsKind(kind))
                 return child;
         return null;
@@ -56,10 +56,10 @@ public static class SyntaxEx
 
         while (queue.Count > 0)
         {
-            var node = queue.Dequeue();
+            SyntaxNode? node = queue.Dequeue();
             if (!visited.Add(node)) continue;
             accept(node);
-            foreach (var childNode in node.ChildNodes())
+            foreach (SyntaxNode? childNode in node.ChildNodes())
                 queue.Enqueue(childNode);
         }
     }
@@ -72,10 +72,10 @@ public static class SyntaxEx
 
         while (queue.Count > 0)
         {
-            var node = queue.Dequeue();
+            SyntaxNode? node = queue.Dequeue();
             if (!visited.Add(node)) continue;
             yield return node;
-            foreach (var childNode in node.ChildNodes())
+            foreach (SyntaxNode? childNode in node.ChildNodes())
                 queue.Enqueue(childNode);
         }
     }
@@ -83,11 +83,11 @@ public static class SyntaxEx
     public static ImmutableArray<SyntaxToken> TraverseTokens(this SyntaxNode syntax)
     {
         var stack = new Stack<SyntaxNodeOrToken>();
-        var builder = ImmutableArray.CreateBuilder<SyntaxToken>();
+        ImmutableArray<SyntaxToken>.Builder? builder = ImmutableArray.CreateBuilder<SyntaxToken>();
         stack.Push(syntax);
         while (stack.Count > 0)
         {
-            var current = stack.Pop();
+            SyntaxNodeOrToken current = stack.Pop();
 
             if (current.IsToken)
             {
@@ -95,7 +95,7 @@ public static class SyntaxEx
                 continue;
             }
 
-            foreach (var child in current.ChildNodesAndTokens())
+            foreach (SyntaxNodeOrToken child in current.ChildNodesAndTokens())
                 stack.Push(child);
         }
 
@@ -110,10 +110,10 @@ public static class SyntaxEx
 
         while (queue.Count > 0)
         {
-            var node = queue.Dequeue();
+            SyntaxNode? node = queue.Dequeue();
             if (!visited.Add(node)) continue;
             yield return selector(node);
-            foreach (var childNode in node.ChildNodes())
+            foreach (SyntaxNode? childNode in node.ChildNodes())
                 queue.Enqueue(childNode);
         }
     }
@@ -126,10 +126,10 @@ public static class SyntaxEx
 
         while (stack.Count > 0)
         {
-            var node = stack.Pop();
+            SyntaxNode? node = stack.Pop();
             if (!visited.Add(node)) continue;
             yield return selector(node);
-            foreach (var childNode in node.ChildNodes())
+            foreach (SyntaxNode? childNode in node.ChildNodes())
                 stack.Push(childNode);
         }
     }

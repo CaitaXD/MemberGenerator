@@ -37,7 +37,7 @@ public static class TypeDeclarationSyntaxEx
         params IEnumerable<MemberDeclarationSyntax> members)
     {
         var syntaxList = new SyntaxList<MemberDeclarationSyntax>();
-        foreach (var memberSyntax in members)
+        foreach (MemberDeclarationSyntax? memberSyntax in members)
             syntaxList = syntaxList.Add(memberSyntax.ToExplicit(syntax, interfaceSyntax));
         return syntax.WithMembers(syntaxList);
     }

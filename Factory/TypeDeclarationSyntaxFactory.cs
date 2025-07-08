@@ -9,7 +9,7 @@ public static class TypeDeclarationSyntaxFactory
 {
     public static TypeDeclarationSyntax CreatePartialType(TypeDeclarationSyntax syntax)
     {
-        var trailingTrivia = syntax.GetTrailingTrivia();
+        SyntaxTriviaList trailingTrivia = syntax.GetTrailingTrivia();
 
         syntax = syntax.WithBaseList(null);
 
@@ -19,17 +19,17 @@ public static class TypeDeclarationSyntaxFactory
                 syntax = newSyntax;
         }
 
-        var lineEnd = SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed);
+        SyntaxTriviaList lineEnd = SyntaxFactory.TriviaList(SyntaxFactory.CarriageReturnLineFeed);
         if (syntax.OpenBraceToken.IsKind(SyntaxKind.None))
         {
-            var openBraceToken = SyntaxFactory.Token(lineEnd, SyntaxKind.OpenBraceToken, lineEnd);
+            SyntaxToken openBraceToken = SyntaxFactory.Token(lineEnd, SyntaxKind.OpenBraceToken, lineEnd);
             syntax = syntax.WithOpenBraceToken(openBraceToken);
         }
 
         if (!syntax.Modifiers.Any(SyntaxKind.PartialKeyword))
         {
-            var whitespace = SyntaxFactory.TriviaList(SyntaxFactory.Whitespace(" "));
-            var partialKeyword = SyntaxFactory.Token(SyntaxTriviaList.Empty, SyntaxKind.PartialKeyword, whitespace);
+            SyntaxTriviaList whitespace = SyntaxFactory.TriviaList(SyntaxFactory.Whitespace(" "));
+            SyntaxToken partialKeyword = SyntaxFactory.Token(SyntaxTriviaList.Empty, SyntaxKind.PartialKeyword, whitespace);
             syntax = syntax.WithModifiers(syntax.Modifiers.Add(partialKeyword));
         }
 
@@ -40,7 +40,7 @@ public static class TypeDeclarationSyntaxFactory
 
         if (syntax.CloseBraceToken.IsKind(SyntaxKind.None))
         {
-            var closeBraceToken = SyntaxFactory.Token(lineEnd, SyntaxKind.CloseBraceToken, SyntaxTriviaList.Empty);
+            SyntaxToken closeBraceToken = SyntaxFactory.Token(lineEnd, SyntaxKind.CloseBraceToken, SyntaxTriviaList.Empty);
             syntax = syntax.WithCloseBraceToken(closeBraceToken);
         }
 

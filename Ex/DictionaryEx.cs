@@ -12,10 +12,8 @@ public static class DictionaryEx
         IEnumerable<KeyValuePair<TKey, TValue>> second) where TKey : notnull
     {
         var result = first.ToBuilder();
-        foreach (var kvp in second)
-        {
+        foreach (var kvp in second) 
             result[kvp.Key] = kvp.Value;
-        }
 
         return result.ToImmutable();
     }
@@ -25,7 +23,7 @@ public static class DictionaryEx
         IEnumerable<(TKey Key, TValue Value)> second) where TKey : notnull
     {
         var result = first.ToBuilder();
-        foreach (var kvp in second)
+        foreach ((TKey Key, TValue Value) kvp in second)
         {
             result[kvp.Key] = kvp.Value;
         }

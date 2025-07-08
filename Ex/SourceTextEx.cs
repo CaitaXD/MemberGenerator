@@ -1,10 +1,10 @@
-global using static MemberGenerator.Ex.GeneratorEx;
+global using static MemberGenerator.Ex.SourceTextEx;
 using System.Text;
 using Microsoft.CodeAnalysis.Text;
 
 namespace MemberGenerator.Ex;
 
-public static class GeneratorEx
+public static class SourceTextEx
 {
     public static string FormatedChecksum(SourceText sourceText, int? take = null)
     {

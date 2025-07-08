@@ -83,7 +83,7 @@ public readonly struct MemberSignature : IEquatable<MemberSignature>
         if (Declaration is not null)
         {
             sb.Append(Declaration.Type);
-            foreach (var variable in Declaration.Variables)
+            foreach (VariableDeclaratorSyntax? variable in Declaration.Variables)
             {
                 sb.Append(variable);
                 sb.Append(";");

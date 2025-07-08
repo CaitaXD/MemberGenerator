@@ -13,7 +13,7 @@ public static class MethodDeclarationSyntaxEx
         GenericNameSyntax genericNameSyntax,
         InterfaceDeclarationSyntax interfaceSyntax)
     {
-        foreach (var syntax in memberSyntax)
+        foreach (MemberDeclarationSyntax? syntax in memberSyntax)
         {
             if (syntax is MethodDeclarationSyntax methodSyntax)
                 yield return ResolveGenericInterfaceMethod(methodSyntax, genericNameSyntax, interfaceSyntax);
@@ -21,12 +21,11 @@ public static class MethodDeclarationSyntaxEx
         }
     }
 
-    public static MemberDeclarationSyntax ResolveGenericInterfaceMethod(
-        this MethodDeclarationSyntax methodSyntax,
+    public static MemberDeclarationSyntax ResolveGenericInterfaceMethod(this MethodDeclarationSyntax methodSyntax,
         GenericNameSyntax genericNameSyntax,
         InterfaceDeclarationSyntax interfaceSyntax)
     {
-        var newMethodSyntax = methodSyntax;
+        MethodDeclarationSyntax? newMethodSyntax = methodSyntax;
         var baseTypeArgs = genericNameSyntax.TypeArgumentList.Arguments;
         var interfaceArgs = interfaceSyntax.TypeParameterList?.Parameters ?? [];
 
@@ -34,7 +33,7 @@ public static class MethodDeclarationSyntaxEx
         {
             if (explicitInterfaceSpecifier.Name is GenericNameSyntax genericInterfaceSpecifier)
             {
-                var newName = ResolveGenericNameSyntax(genericInterfaceSpecifier);
+                GenericNameSyntax? newName = ResolveGenericNameSyntax(genericInterfaceSpecifier);
                 newMethodSyntax = newMethodSyntax.WithExplicitInterfaceSpecifier(
                     explicitInterfaceSpecifier.WithName(newName)
                 );
@@ -44,11 +43,11 @@ public static class MethodDeclarationSyntaxEx
 
         if (newMethodSyntax.ParameterList is { Parameters: { Count: > 0 } parameters })
         {
-            foreach (var parameter in parameters)
+            foreach (ParameterSyntax? parameter in parameters)
             {
                 if (parameter.Type is GenericNameSyntax genericParameter)
                 {
-                    var newParameter = ResolveGenericNameSyntax(genericParameter);
+                    GenericNameSyntax? newParameter = ResolveGenericNameSyntax(genericParameter);
                     newMethodSyntax = newMethodSyntax
                         .WithParameterList(
                             newMethodSyntax.ParameterList.WithParameters(
@@ -63,7 +62,7 @@ public static class MethodDeclarationSyntaxEx
 
         if (newMethodSyntax.ReturnType is GenericNameSyntax genericReturnType)
         {
-            var newReturnType = ResolveGenericNameSyntax(genericReturnType);
+            GenericNameSyntax? newReturnType = ResolveGenericNameSyntax(genericReturnType);
             newMethodSyntax = newMethodSyntax.WithReturnType(newReturnType);
         }
 
@@ -83,29 +82,29 @@ public static class MethodDeclarationSyntaxEx
 
         void ResolveGenericExpression(SyntaxNode node)
         {
-            foreach (var interfaceArg in interfaceArgs)
-            foreach (var baseTypeArg in baseTypeArgs)
+            foreach (TypeParameterSyntax? interfaceArg in interfaceArgs)
+            foreach (TypeSyntax? baseTypeArg in baseTypeArgs)
                 if (node.ToString() == interfaceArg.ToString())
                     newMethodSyntax = newMethodSyntax.ReplaceNode(node, baseTypeArg);
         }
 
-        GenericNameSyntax ResolveGenericNameSyntax(GenericNameSyntax genericNameSyntax)
+        GenericNameSyntax ResolveGenericNameSyntax(GenericNameSyntax genericName)
         {
-            var typeArgs = genericNameSyntax.TypeArgumentList.Arguments;
+            var typeArgs = genericName.TypeArgumentList.Arguments;
             var newReturnArgs = typeArgs.ToArray();
 
             for (var i = 0; i < typeArgs.Count; i++)
             {
-                var returnArg = typeArgs[i];
+                TypeSyntax? returnArg = typeArgs[i];
                 for (var j = 0; j < interfaceArgs.Count; j++)
                 {
-                    var interfaceArg = interfaceArgs[j];
+                    TypeParameterSyntax? interfaceArg = interfaceArgs[j];
                     if (returnArg.ToString() == interfaceArg.Identifier.Text)
                         newReturnArgs[i] = baseTypeArgs[j];
                 }
             }
 
-            return genericNameSyntax.WithTypeArgumentList(
+            return genericName.WithTypeArgumentList(
                 SyntaxFactory.TypeArgumentList(
                     SyntaxFactory.SeparatedList(newReturnArgs)
                 )
