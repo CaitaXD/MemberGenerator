@@ -6,7 +6,7 @@ namespace MemberGenerator.Ex;
 
 public static class InterfaceDeclarationSyntaxEx
 {
-    public static bool NameEquals(this InterfaceDeclarationSyntax declaration, TypeSyntax type)
+    public static bool IsCompatibleType(this InterfaceDeclarationSyntax declaration, TypeSyntax type)
     {
         string typeName = type.ToString();
         string interfaceName = declaration.Identifier.Text;

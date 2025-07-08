@@ -215,46 +215,28 @@ public class MemberGenerator : IIncrementalGenerator
     {
         var memberSignatureFromSyntax = MemberSignature.FromDeclarationSyntax;
         var compareByMemberSignature = EqualityComparer.Select(memberSignatureFromSyntax);
-        ImmutableArray<MemberDeclarationSyntax>.Builder allMembers = ImmutableArray.CreateBuilder<MemberDeclarationSyntax>();
+        ImmutableArray<MemberDeclarationSyntax>.Builder allMembers =
+            ImmutableArray.CreateBuilder<MemberDeclarationSyntax>();
         var membersOfType = partialParts!.SelectMany(x => x.Members).Concat(typeSyntax.Members).ToArray();
 
         SemanticModel semanticModel = context.SemanticModel.Compilation.GetSemanticModel(typeSyntax.SyntaxTree);
         INamedTypeSymbol typeSymbol = semanticModel.GetDeclaredSymbol(typeSyntax)!;
 
-        // foreach (var kvp in interfaceMembers)
-        // {
-        //     var (interfaceSyntax, defaultMembers) = (kvp.Key, kvp.Value);
-        //     if (defaultMembers.Count == 0) continue;
-        //
-        //     string interfaceName = $"{interfaceSyntax.Identifier.Text}{interfaceSyntax.TypeParameterList}";
-        //     if (typeSymbol.ImplementsDirectly(interfaceName))
-        //     {
-        //         if (typeSyntax is { BaseList: {} baseList })
-        //         {
-        //             foreach (var basType in baseList.Types)
-        //             {
-        //                 if (basType.Type is GenericNameSyntax genericNameSyntax)
-        //                 {
-        //                     defaultMembers = defaultMembers
-        //                         .ResolveGenerics(genericNameSyntax, interfaceSyntax)
-        //                         .ToReadonlyCollection();
-        //                 }
-        //             }
-        //
-        //             allMembers.AddRange(defaultMembers.Except(membersOfType, compareByMemberSignature));
-        //         }
-        //     }
-        // }
-
-        foreach (BaseTypeSyntax baseTypeSyntax in typeSyntax.BaseList!.Types)
+        foreach (var kvp in interfaceMembers)
         {
-            if (cancellationToken.IsCancellationRequested) return ImmutableArray<MemberDeclarationSyntax>.Empty;
-            foreach (var kvp in interfaceMembers)
+            var (interfaceSyntax, defaultMembers) = (kvp.Key, kvp.Value);
+            string interfaceName = $"{interfaceSyntax.Identifier.Text}{interfaceSyntax.TypeParameterList}";
+            
+            if (!typeSymbol.Implements(interfaceName)) 
+                continue;
+            
+            foreach (BaseTypeSyntax baseTypeSyntax in typeSyntax.BaseList!.Types)
             {
-                var (interfaceSyntax, defaultMembers) = (kvp.Key, kvp.Value);
-                if (cancellationToken.IsCancellationRequested) return ImmutableArray<MemberDeclarationSyntax>.Empty;
-        
-                if (interfaceSyntax.NameEquals(baseTypeSyntax.Type))
+                if (cancellationToken.IsCancellationRequested)
+                    return ImmutableArray<MemberDeclarationSyntax>.Empty;
+                if (defaultMembers.Count == 0) continue;
+
+                if (interfaceSyntax.IsCompatibleType(baseTypeSyntax.Type))
                 {
                     if (baseTypeSyntax.Type is GenericNameSyntax genericNameSyntax)
                         defaultMembers = defaultMembers.ResolveGenerics(genericNameSyntax
@@ -280,7 +262,7 @@ public class MemberGenerator : IIncrementalGenerator
             foreach (InterfaceDeclarationSyntax? interfaceSyntax in parentInterfaces)
             {
                 if (cancellationToken.IsCancellationRequested) yield break;
-                if (interfaceSyntax.NameEquals(baseTypeSyntax.Type))
+                if (interfaceSyntax.IsCompatibleType(baseTypeSyntax.Type))
                     yield return interfaceSyntax;
             }
         }
