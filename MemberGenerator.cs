@@ -218,23 +218,16 @@ public class MemberGenerator : IIncrementalGenerator
         ImmutableArray<MemberDeclarationSyntax>.Builder allMembers =
             ImmutableArray.CreateBuilder<MemberDeclarationSyntax>();
         var membersOfType = partialParts!.SelectMany(x => x.Members).Concat(typeSyntax.Members).ToArray();
-
-        SemanticModel semanticModel = context.SemanticModel.Compilation.GetSemanticModel(typeSyntax.SyntaxTree);
-        INamedTypeSymbol typeSymbol = semanticModel.GetDeclaredSymbol(typeSyntax)!;
-
+        
         foreach (var kvp in interfaceMembers)
         {
             var (interfaceSyntax, defaultMembers) = (kvp.Key, kvp.Value);
-            string interfaceName = $"{interfaceSyntax.Identifier.Text}{interfaceSyntax.TypeParameterList}";
-            
-            if (!typeSymbol.Implements(interfaceName)) 
-                continue;
-            
+            if (defaultMembers.Count == 0) continue;
+
             foreach (BaseTypeSyntax baseTypeSyntax in typeSyntax.BaseList!.Types)
             {
                 if (cancellationToken.IsCancellationRequested)
                     return ImmutableArray<MemberDeclarationSyntax>.Empty;
-                if (defaultMembers.Count == 0) continue;
 
                 if (interfaceSyntax.IsCompatibleType(baseTypeSyntax.Type))
                 {
