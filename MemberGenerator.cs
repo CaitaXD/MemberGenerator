@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using MemberGenerator.Ex;
-using MemberGenerator.Factory;
+using MemberGenerator.Utils;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -24,7 +24,7 @@ public class MemberGenerator : IIncrementalGenerator
           namespace {{Namespace}}
           {
               [System.AttributeUsage(System.AttributeTargets.Interface)]
-              internal class {{GenerateDefaultMembersAttributeName}}Attribute : System.Attribute
+              public class {{GenerateDefaultMembersAttributeName}}Attribute : System.Attribute
               {
               }
           };
@@ -41,8 +41,14 @@ public class MemberGenerator : IIncrementalGenerator
         });
 
         var interfacesWithAttribute = context.SyntaxProvider
-            .ForAttributeWithMetadataName<InterfaceDeclarationSyntax>(
-                $"{Namespace}.{GenerateDefaultMembersAttributeName}Attribute"
+            .ForAttributeWithMetadataName(
+                $"{Namespace}.{GenerateDefaultMembersAttributeName}Attribute",
+                static (syntax, _) => syntax is InterfaceDeclarationSyntax,
+                static (context, _) =>
+                {
+                    var declaration = (InterfaceDeclarationSyntax)context.TargetNode;
+                    return declaration;
+                }
             ).Collect();
 
         var usingDirectives = context.SyntaxProvider
@@ -50,12 +56,15 @@ public class MemberGenerator : IIncrementalGenerator
             .Collect();
 
         var interfaceImplementationMap = context.SyntaxProvider
-            .CreateSyntaxProvider<InterfaceDeclarationSyntax>()
+            .CreateSyntaxProvider(static (syntax, _) => syntax is InterfaceDeclarationSyntax,
+                static (context, _) => (context, node: (InterfaceDeclarationSyntax)context.Node)
+            )
             .Combine(interfacesWithAttribute)
             .Select(static (state, cancellationToken) => (
-                interfaceSyntax: state.Left,
+                state.Left.context,
+                interfaceSyntax: state.Left.node,
                 parentInterfaces: ExtractParentInterfaces(
-                    syntax: state.Left,
+                    syntax: state.Left.node,
                     parentInterfaces: state.Right,
                     cancellationToken: cancellationToken
                 )
@@ -63,9 +72,10 @@ public class MemberGenerator : IIncrementalGenerator
             .Combine(usingDirectives)
             .Select(static (state, _) =>
             {
-                var ((interfaceSyntax, parentInterfaces), usings) = state;
+                var ((context, interfaceSyntax, parentInterfaces), usings) = state;
                 var enumeratedParentInterfaces = parentInterfaces.ToReadonlyCollection();
                 var concatenation = enumeratedParentInterfaces.Append(interfaceSyntax);
+
                 var members = concatenation.GetDefaultMembers().ToReadonlyCollection();
                 var intersection = usings.Select(s => s.SyntaxTree).Intersect(members.Select(x => x.SyntaxTree));
                 return (
@@ -127,6 +137,10 @@ public class MemberGenerator : IIncrementalGenerator
             .Select(static (state, cancellationToken) =>
             {
                 var (context, typeSyntax, defaultInterfaceMembersMap, usings, partialParts) = state;
+
+                string namespaceName = context.SemanticModel.GetDeclaredSymbol(typeSyntax)!
+                    .ContainingNamespace.ToString();
+
                 bool isNestedType = typeSyntax.IsNestedType();
                 TypeDeclarationSyntax? parentOfType = null;
                 if (isNestedType)
@@ -134,17 +148,19 @@ public class MemberGenerator : IIncrementalGenerator
                     parentOfType = (TypeDeclarationSyntax)typeSyntax.Parent!;
                 }
 
-                var namespaceName = typeSyntax.GetNamespace();
-                var notImplementedMembers = ExtractNotImplementedMembers(
-                    context,
-                    typeSyntax,
-                    partialParts,
+                var semanticModel = context.SemanticModel.Compilation.GetSemanticModel(typeSyntax.SyntaxTree);
+                var resolvedMembers = ResolveGenericMembers(
+                    typeSyntax.BaseList?.Types ?? [],
                     defaultInterfaceMembersMap,
+                    semanticModel,
                     cancellationToken
                 );
+                var existingMembers = partialParts.Append(typeSyntax).SelectMany(x => x.Members);
 
-                typeSyntax = typeSyntax.WithPublicMembers(notImplementedMembers);
-                TypeDeclarationSyntax partialType = TypeDeclarationSyntaxFactory.CreatePartialType(typeSyntax);
+                typeSyntax = Semantics.FullyQualify(semanticModel, typeSyntax);
+                typeSyntax = typeSyntax.WithPublicMembers(resolvedMembers.Except(existingMembers));
+
+                TypeDeclarationSyntax partialType = TypeDeclarationUtil.CreatePartialType(typeSyntax);
                 if (isNestedType)
                 {
                     partialType = SyntaxFactory.TypeDeclaration(parentOfType!.Kind(), parentOfType.Identifier)
@@ -156,7 +172,7 @@ public class MemberGenerator : IIncrementalGenerator
                         .NormalizeWhitespace();
                 }
 
-                return notImplementedMembers.Length > 0 ? (partialType, namespaceName, usings) : default;
+                return resolvedMembers.Count > 0 ? (partialType, namespaceName, usings) : default;
             })
             .Where(static typeSyntax => typeSyntax != default)
             .Collect();
@@ -166,7 +182,7 @@ public class MemberGenerator : IIncrementalGenerator
             {
                 var sb = new StringBuilder();
 
-                foreach ((TypeDeclarationSyntax partialType, string? namespaceName, var usings) in state)
+                foreach ((TypeDeclarationSyntax partialType, string namespaceName, var usings) in state)
                 {
                     sb.AppendLine("// <auto-generated/>");
                     sb.AppendLine("#nullable enable");
@@ -199,44 +215,42 @@ public class MemberGenerator : IIncrementalGenerator
                     string fileName =
                         $"{partialType.Identifier.Text}{safeParameterListName}_{checksum}.g.cs";
                     ctx.AddSource(fileName, sourceCode);
-                    Console.WriteLine(fileName);
-                    Console.WriteLine(sourceCode);
                     sb.Clear();
                 }
             });
     }
 
-    static ImmutableArray<MemberDeclarationSyntax> ExtractNotImplementedMembers(
-        GeneratorSyntaxContext context,
-        TypeDeclarationSyntax typeSyntax,
-        IEnumerable<TypeDeclarationSyntax>? partialParts,
+    static ImmutableHashSet<MemberDeclarationSyntax> ResolveGenericMembers(
+        SeparatedSyntaxList<BaseTypeSyntax> typeSyntaxes,
         ImmutableDictionary<InterfaceDeclarationSyntax, IReadOnlyCollection<MemberDeclarationSyntax>> interfaceMembers,
+        SemanticModel semanticModel,
         CancellationToken cancellationToken = default)
     {
         var memberSignatureFromSyntax = MemberSignature.FromDeclarationSyntax;
-        var compareByMemberSignature = EqualityComparer.Select(memberSignatureFromSyntax);
-        ImmutableArray<MemberDeclarationSyntax>.Builder allMembers =
-            ImmutableArray.CreateBuilder<MemberDeclarationSyntax>();
-        var membersOfType = partialParts!.SelectMany(x => x.Members).Concat(typeSyntax.Members).ToArray();
-        
+        var compareByMemberSignature = EqualityComparer.CompareBy(memberSignatureFromSyntax);
+        var allMembers = ImmutableHashSet.CreateBuilder(compareByMemberSignature);
+
         foreach (var kvp in interfaceMembers)
         {
             var (interfaceSyntax, defaultMembers) = (kvp.Key, kvp.Value);
             if (defaultMembers.Count == 0) continue;
 
-            foreach (BaseTypeSyntax baseTypeSyntax in typeSyntax.BaseList!.Types)
+            foreach (var baseTypeSyntax in typeSyntaxes)
             {
                 if (cancellationToken.IsCancellationRequested)
-                    return ImmutableArray<MemberDeclarationSyntax>.Empty;
+                    return ImmutableHashSet<MemberDeclarationSyntax>.Empty;
 
-                if (interfaceSyntax.IsCompatibleType(baseTypeSyntax.Type))
+                if (!interfaceSyntax.IsCompatibleType(baseTypeSyntax.Type)) continue;
+
+                if (baseTypeSyntax.Type is GenericNameSyntax genericNameSyntax)
                 {
-                    if (baseTypeSyntax.Type is GenericNameSyntax genericNameSyntax)
-                        defaultMembers = defaultMembers.ResolveGenerics(genericNameSyntax
-                                , interfaceSyntax)
-                            .ToReadonlyCollection();
-                    allMembers.AddRange(defaultMembers.Except(membersOfType, compareByMemberSignature));
+                    defaultMembers = defaultMembers.ResolveGenerics(
+                        genericNameSyntax,
+                        interfaceSyntax
+                    ).ToReadonlyCollection();
                 }
+
+                allMembers.UnionWith(defaultMembers);
             }
         }
 

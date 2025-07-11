@@ -8,7 +8,7 @@ public static class EqualityComparer
     public static IEqualityComparer<T> Create<T>(Func<T, T, bool> equals, Func<T, int>? getHashCode = null) =>
         new DelegateEqualityComparer<T>(equals, getHashCode);
 
-    public static IEqualityComparer<T> Select<T, TResult>(Func<T, TResult> selector) =>
+    public static IEqualityComparer<T> CompareBy<T, TResult>(Func<T, TResult> selector) =>
         new DelegateEqualityComparer<T>(
             (x, y) => selector(x)?.Equals(selector(y)) is true,
             x => selector(x)?.GetHashCode() ?? 0

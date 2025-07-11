@@ -3,15 +3,17 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace MemberGenerator.Factory;
+namespace MemberGenerator.Utils;
 
-public static class TypeDeclarationSyntaxFactory
+public static class TypeDeclarationUtil
 {
     public static TypeDeclarationSyntax CreatePartialType(TypeDeclarationSyntax syntax)
     {
         SyntaxTriviaList trailingTrivia = syntax.GetTrailingTrivia();
 
-        syntax = syntax.WithBaseList(null);
+        syntax = syntax
+            .WithBaseList(null)
+            .WithAttributeLists([]);
 
         if (syntax.FirstChildNodeOrDefault<ParameterListSyntax>() is {} parameterListSyntax)
         {
@@ -29,7 +31,8 @@ public static class TypeDeclarationSyntaxFactory
         if (!syntax.Modifiers.Any(SyntaxKind.PartialKeyword))
         {
             SyntaxTriviaList whitespace = SyntaxFactory.TriviaList(SyntaxFactory.Whitespace(" "));
-            SyntaxToken partialKeyword = SyntaxFactory.Token(SyntaxTriviaList.Empty, SyntaxKind.PartialKeyword, whitespace);
+            SyntaxToken partialKeyword =
+                SyntaxFactory.Token(SyntaxTriviaList.Empty, SyntaxKind.PartialKeyword, whitespace);
             syntax = syntax.WithModifiers(syntax.Modifiers.Add(partialKeyword));
         }
 
@@ -40,7 +43,8 @@ public static class TypeDeclarationSyntaxFactory
 
         if (syntax.CloseBraceToken.IsKind(SyntaxKind.None))
         {
-            SyntaxToken closeBraceToken = SyntaxFactory.Token(lineEnd, SyntaxKind.CloseBraceToken, SyntaxTriviaList.Empty);
+            SyntaxToken closeBraceToken =
+                SyntaxFactory.Token(lineEnd, SyntaxKind.CloseBraceToken, SyntaxTriviaList.Empty);
             syntax = syntax.WithCloseBraceToken(closeBraceToken);
         }
 

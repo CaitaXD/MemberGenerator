@@ -35,4 +35,10 @@ public static class DictionaryEx
         this IEnumerable<TValue> source,
         Func<TValue, TKey> keySelector) where TKey : notnull =>
         source.GroupBy(keySelector).ToImmutableDictionary(g => g.Key, g => g.AsEnumerable());
+    
+    public static ImmutableDictionary<TKey, IEnumerable<TResult>> GroupByToImmutableDictionary<TKey, TValue, TResult>(
+        this IEnumerable<TValue> source,
+        Func<TValue, TKey> keySelector,
+        Func<TValue, TResult> elementSelector) where TKey : notnull =>
+        source.GroupBy(keySelector).ToImmutableDictionary(g => g.Key, g => g.Select(elementSelector));
 }

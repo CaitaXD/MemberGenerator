@@ -30,18 +30,6 @@ public static class TypeDeclarationSyntaxEx
             ),
         };
 
-    [Obsolete("Now that i think about it, i dont see why would i want this")]
-    public static TypeDeclarationSyntax WithExplicitInterfaceMembers(
-        this TypeDeclarationSyntax syntax,
-        BaseTypeSyntax interfaceSyntax,
-        params IEnumerable<MemberDeclarationSyntax> members)
-    {
-        var syntaxList = new SyntaxList<MemberDeclarationSyntax>();
-        foreach (MemberDeclarationSyntax? memberSyntax in members)
-            syntaxList = syntaxList.Add(memberSyntax.ToExplicit(syntax, interfaceSyntax));
-        return syntax.WithMembers(syntaxList);
-    }
-
     public static bool IsNestedType(this TypeDeclarationSyntax syntax) => syntax.Parent is TypeDeclarationSyntax;
 
     public static TypeDeclarationSyntax AddModifierIfNotExists(

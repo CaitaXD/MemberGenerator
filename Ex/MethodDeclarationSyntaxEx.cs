@@ -68,12 +68,12 @@ public static class MethodDeclarationSyntaxEx
 
         if (newMethodSyntax.Body is {} blockSyntax)
         {
-            blockSyntax.VisitNodesDepthFirst(ResolveGenericExpression);
+            blockSyntax.Visit(ResolveGenericExpression);
         }
 
         if (newMethodSyntax.ExpressionBody is {} expressionSyntax)
         {
-            expressionSyntax.Expression.VisitNodesDepthFirst(ResolveGenericExpression);
+            expressionSyntax.Expression.Visit(ResolveGenericExpression);
         }
 
         return (newMethodSyntax ?? methodSyntax)

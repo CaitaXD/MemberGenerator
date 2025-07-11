@@ -48,7 +48,7 @@ public static class SyntaxEx
     public static SyntaxToken LastChildToken(this SyntaxNode syntaxNode, SyntaxKind kind) =>
         syntaxNode.LastChildTokenOrDefault(kind)!.Value;
 
-    public static void VisitNodesDepthFirst(this SyntaxNode syntax, Action<SyntaxNode> accept)
+    public static void Visit(this SyntaxNode syntax, Action<SyntaxNode> accept)
     {
         HashSet<SyntaxNode> visited = [];
         Queue<SyntaxNode> queue = new();
@@ -64,21 +64,6 @@ public static class SyntaxEx
         }
     }
 
-    public static IEnumerable<SyntaxNode> TraverseNodesDepthFirst(this SyntaxNode syntax)
-    {
-        HashSet<SyntaxNode> visited = [];
-        Queue<SyntaxNode> queue = new();
-        queue.Enqueue(syntax);
-
-        while (queue.Count > 0)
-        {
-            SyntaxNode? node = queue.Dequeue();
-            if (!visited.Add(node)) continue;
-            yield return node;
-            foreach (SyntaxNode? childNode in node.ChildNodes())
-                queue.Enqueue(childNode);
-        }
-    }
 
     public static ImmutableArray<SyntaxToken> TraverseTokens(this SyntaxNode syntax)
     {
@@ -100,65 +85,6 @@ public static class SyntaxEx
         }
 
         return builder.ToImmutable();
-    }
-    
-    public static IEnumerable<T> TraverseNodesDepthFirst<T>(this SyntaxNode syntax, Func<SyntaxNode, T> selector)
-    {
-        HashSet<SyntaxNode> visited = [];
-        Queue<SyntaxNode> queue = new();
-        queue.Enqueue(syntax);
-
-        while (queue.Count > 0)
-        {
-            SyntaxNode? node = queue.Dequeue();
-            if (!visited.Add(node)) continue;
-            yield return selector(node);
-            foreach (SyntaxNode? childNode in node.ChildNodes())
-                queue.Enqueue(childNode);
-        }
-    }
-
-    public static IEnumerable<T> TraverseNodesBreadthFirst<T>(this SyntaxNode syntax, Func<SyntaxNode, T> selector)
-    {
-        HashSet<SyntaxNode> visited = [];
-        Stack<SyntaxNode> stack = new();
-        stack.Push(syntax);
-
-        while (stack.Count > 0)
-        {
-            SyntaxNode? node = stack.Pop();
-            if (!visited.Add(node)) continue;
-            yield return selector(node);
-            foreach (SyntaxNode? childNode in node.ChildNodes())
-                stack.Push(childNode);
-        }
-    }
-
-    public static string GetNamespace(this SyntaxNode syntax)
-    {
-        string nameSpace = string.Empty;
-
-        SyntaxNode? potentialParent = syntax.Parent;
-
-        while (potentialParent is not null
-               and not NamespaceDeclarationSyntax
-               and not FileScopedNamespaceDeclarationSyntax)
-        {
-            potentialParent = potentialParent.Parent;
-        }
-
-        if (potentialParent is BaseNamespaceDeclarationSyntax namespaceParent)
-        {
-            nameSpace = namespaceParent.Name.ToString();
-            while (true)
-            {
-                if (namespaceParent.Parent is not NamespaceDeclarationSyntax parent) break;
-                nameSpace = $"{namespaceParent.Name}.{nameSpace}";
-                namespaceParent = parent;
-            }
-        }
-
-        return nameSpace;
     }
 
     public static bool IsPartialTypeDeclaration(this SyntaxNode syntax) =>
